@@ -1,11 +1,11 @@
 // ==UserScript==
-// @name         Education Impacted (Added pre-span detection to reduce buffers, failsafe, and bug fixes)
+// @name         Education Impacted (Added the option to choose Non-Dictionary Solver)
 // @namespace    http://tampermonkey.net/
-// @version      3.5
+// @version      3.6
 // @description  Automated completion for Education Perfect vocabulary tasks with learning capabilities.
 // @author       Nightclaus
 // @match        https://app.educationperfect.com/*
-// @grant        none
+// @grant        unsafeWindow
 // @run-at       document-idle
 // ==/UserScript==
 
@@ -98,6 +98,14 @@
                 <div id="dictionary-display"></div>
             </div>
             <div id="tab-auto" class="tab-content">
+                <div class="slider-container">
+                        <input type="checkbox" id="check-dictionary-solver" checked>
+                        <label class="setting-label" style="margin:0; font-weight:bold; color:#ff4d4d;">Enable Dictionary Solver</label>
+                </div>
+                <div class="slider-container">
+                        <input type="checkbox" id="check-non-dictionary-solver">
+                        <label class="setting-label" style="margin:0; font-weight:bold; color:#ff4d4d;">Enable Non-Dictionary Solver</label>
+                </div>
                 <div class="settings-section">
                     <div class="answer-preview-box">
                         <label class="setting-label">Current Answer</label>
@@ -106,7 +114,7 @@
                 </div>
                 <div class="settings-section">
                     <div class="slider-container">
-                         <input type="checkbox" id="check-autotype">
+                         <input type="checkbox" id="check-autotype" checked>
                          <label class="setting-label" style="margin:0; font-weight:bold; color:#ff4d4d;">Enable Autotyping</label>
                     </div>
                     <div id="typing-settings" class="ui-disabled">
@@ -139,6 +147,8 @@
         bidirectionalCheck: document.getElementById('check-bidirectional-dictionary'),
         typingSettings: document.getElementById('typing-settings'),
         startSolverBtn: document.getElementById('btn-toggle-solver'),
+        enableDictionarySolver: document.getElementById('check-dictionary-solver'),
+        enableNonDictionarySolver: document.getElementById('check-non-dictionary-solver'),
         ansPreview: document.getElementById('display-answer'),
         delayInput: document.getElementById('input-delay'),
         offsetInput: document.getElementById('input-offset'),
@@ -147,10 +157,15 @@
     };
 
     // --- 3. UI Logic ---
+    elements.typingSettings.classList.toggle('ui-disabled', false); // Default enabled
+
     elements.delayInput.oninput = () => elements.delayVal.innerText = elements.delayInput.value;
     elements.offsetInput.oninput = () => elements.offsetVal.innerText = elements.offsetInput.value;
     elements.autoTypeCheck.onchange = () => elements.typingSettings.classList.toggle('ui-disabled', !elements.autoTypeCheck.checked);
     
+    elements.enableDictionarySolver.onchange = () => {elements.enableNonDictionarySolver.checked = !elements.enableNonDictionarySolver.checked;};
+    elements.enableNonDictionarySolver.onchange = () => {elements.enableDictionarySolver.checked = !elements.enableDictionarySolver.checked;};
+
     elements.toggleBtn.onclick = () => {
         elements.wrapper.classList.toggle('collapsed');
         elements.toggleBtn.innerText = elements.wrapper.classList.contains('collapsed') ? '<' : '>';
@@ -196,31 +211,48 @@
     function runSolverStep() {
         if (!solverActive) return;
 
-        // Learn from Correction Screen (The Edgecase)
-        const missedQElement = document.getElementById('question-field');
-        const correctAElement = document.getElementById('correct-answer-field');
+        // Add try catch later
 
-        if (missedQElement && correctAElement) {
-            const learnedQ = sanitize(missedQElement.innerText);
-            const learnedA = sanitize(correctAElement.value || correctAElement.innerText); // value for inputs, innerText for spans
-            
-            if (learnedQ && learnedA && wordDictionary[learnedQ] !== learnedA) {
-                wordDictionary[learnedQ] = learnedA;
-                wordDictionary[learnedA] = learnedQ;
-                console.log(`Learned: ${learnedQ} = ${learnedA}`);
+        const inputField = document.getElementById('answer-text');
+        var answer = null;
+
+        // Dictonary tech via question lookup
+        if (elements.enableDictionarySolver.checked) {
+            // Learn from Correction Screen
+            const missedQElement = document.getElementById('question-field');
+            const correctAElement = document.getElementById('correct-answer-field');
+
+            if (missedQElement && correctAElement) {
+                const learnedQ = sanitize(missedQElement.innerText);
+                const learnedA = sanitize(correctAElement.value || correctAElement.innerText); // value for inputs, innerText for spans
+                
+                if (learnedQ && learnedA && wordDictionary[learnedQ] !== learnedA) {
+                    wordDictionary[learnedQ] = learnedA;
+                    wordDictionary[learnedA] = learnedQ;
+                    console.log(`Learned: ${learnedQ} = ${learnedA}`);
+                }
+            }
+            // Dictionary Question Lookup
+            var questionText = sanitize(document.getElementById('question-text')?.innerText);
+            if (!questionText || (questionText && !wordDictionary[questionText])) { // Guard
+                questionText = sanitize(document.querySelector('#question-text > span')?.innerText);
+            }
+            if (questionText && wordDictionary[questionText]) {
+                answer = wordDictionary[questionText];
             }
         }
 
-        // Standard Solving
-        const inputField = document.getElementById('answer-text');
-        var questionText = sanitize(document.getElementById('question-text')?.innerText);
-        if (!questionText || (questionText && !wordDictionary[questionText])) { // Guard
-            questionText = sanitize(document.querySelector('#question-text > span')?.innerText);
-        }
-        if (questionText && wordDictionary[questionText]) {
-            const answer = wordDictionary[questionText];
-            elements.ansPreview.innerText = answer;
+        //Non-dictonary tech via model lookup
+        if (elements.enableNonDictionarySolver.checked || (elements.enableDictionarySolver.checked && !answer)) {
+            const prompt = document.querySelector('.prompt');
+            if (!prompt) return;
 
+            const ctrl = unsafeWindow.angular.element(prompt).controller();
+            answer = ctrl.model._currentQuestion.validAnswers[0].outputString;
+        }
+        
+        if (answer) {     
+            elements.ansPreview.innerText = answer;
             if (elements.autoTypeCheck.checked && inputField && inputField.value !== answer) {
                 inputField.focus();
                 document.execCommand('selectAll', false, null);
@@ -237,7 +269,7 @@
             elements.startSolverBtn.innerText = "Start Solver";
             elements.startSolverBtn.style.background = "#ff4d4d";
         } else {
-            if (Object.keys(wordDictionary).length === 0) return alert("Scrape dictionary first!");
+            if ((Object.keys(wordDictionary).length === 0) && elements.enableDictionarySolver.checked) return alert("Scrape dictionary first! or Enable Non-Dictionary Solver.");
             
             const startBtn = document.querySelector('#start-button-main');
             if (startBtn) startBtn.click();

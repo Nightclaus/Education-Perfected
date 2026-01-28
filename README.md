@@ -17,6 +17,10 @@ Automated completion for Education Perfect vocabulary tasks with learning capabi
 3. Press the inbuilt ```AUTOSOLVER``` tab, set your preferences, and hit ```START SOLVER```.
 4. Spam the ```Enter``` Key
 
+OR
+
+1. Enable ```Non-Dictionary Solver``` and hit ```START SOLVER```.
+
 ### Features
 
 The Program can:
@@ -27,6 +31,7 @@ The Program can:
 You can choose for the program to:
 - Use ```Bidirectional Dictionaries``` (Useful for Reading/Writing tasks as EP Vocab Dictionaries are uni-directional by default)
 - ```Enable Autotyping``` (The program will attempt to spam the answer into the answer box. Disable it to manually overide the answer)
+- Use ```Non-Dictionary``` mode (Advance Solver)
 
 ### Troubleshooting during usage
 
@@ -38,10 +43,11 @@ Note that you still need to press the enter key to cycle the questions. Due to t
 
 Some teachers may attach multiple translations of the same word. The program may be continually stuck in an infinite self correction loop. Manual intervetion is needed. Stop the autosolver and complete it manually before re-enabling it.
 
-### What's New in Version 3.5
+### What's New in Version 3.5 and 3.6
 
 - Improved Question Seeking for sub 50ms processing times per individual question
 - Minor UI Bug Fixes
 - Bidirectional Dictionaries is now enabled as a default setting
+- [NEW] Added a Non-Dictionary Solver. No need to scrape dictionaries before use. Can be used for all vocab tasks including Listening Tasks.
 
 Have Fun!
