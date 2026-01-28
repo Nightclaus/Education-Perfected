@@ -1,7 +1,7 @@
 // ==UserScript==
-// @name         Education Impacted (Optional Bidirectional Dictionary)
+// @name         Education Impacted (Added pre-span detection to reduce buffers, failsafe, and bug fixes)
 // @namespace    http://tampermonkey.net/
-// @version      3.4
+// @version      3.5
 // @description  Automated completion for Education Perfect vocabulary tasks with learning capabilities.
 // @author       Nightclaus
 // @match        https://app.educationperfect.com/*
@@ -90,7 +90,7 @@
             </div>
             <div id="tab-dict" class="tab-content active">
                 <div class="slider-container">
-                        <input type="checkbox" id="check-bidirectional-dictionary">
+                        <input type="checkbox" id="check-bidirectional-dictionary" checked>
                         <label class="setting-label" style="margin:0; font-weight:bold; color:#ff4d4d;">Enable Bidirectional Dictionary</label>
                 </div>
                 <button id="btn-scrape" class="action-btn">Create Dictionary</button>
@@ -165,7 +165,7 @@
     });
 
     // --- 4. Dictionary Logic ---
-    const sanitize = (text) => text ? text.trim().split(';')[0] : null; // .replace(/'/g, '')
+    const sanitize = (text) => text ? text.split(';')[0].split('(')[0].trim() : null; // .replace(/'/g, '')
 
     elements.scrapeBtn.onclick = () => {
         const wordItems = document.querySelectorAll('.h-group.preview-grid-item-content.ng-scope');
@@ -189,7 +189,7 @@
         });
         const dictionaryLength = Object.keys(wordDictionary).length;
         elements.dictDisplay.style.display = 'block';
-        elements.scrapeBtn.innerText = `REFRESH (${elements.bidirectionalCheck.checked ? dictionaryLength : Math.floor(dictionaryLength / 2)} words)`;
+        elements.scrapeBtn.innerText = `REFRESH (${elements.bidirectionalCheck.checked ? Math.floor(dictionaryLength / 2) : dictionaryLength} words)`;
     };
 
     // --- 5. Solver Logic ---
@@ -212,9 +212,11 @@
         }
 
         // Standard Solving
-        const questionText = sanitize(document.querySelector('#question-text > span')?.innerText);
         const inputField = document.getElementById('answer-text');
-
+        var questionText = sanitize(document.getElementById('question-text')?.innerText);
+        if (!questionText || (questionText && !wordDictionary[questionText])) { // Guard
+            questionText = sanitize(document.querySelector('#question-text > span')?.innerText);
+        }
         if (questionText && wordDictionary[questionText]) {
             const answer = wordDictionary[questionText];
             elements.ansPreview.innerText = answer;
