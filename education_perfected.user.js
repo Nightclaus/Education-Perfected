@@ -1,7 +1,7 @@
 // ==UserScript==
-// @name         Education Impacted (Polished + Edgecase Fix)
+// @name         Education Impacted (Optional Bidirectional Dictionary)
 // @namespace    http://tampermonkey.net/
-// @version      3.3
+// @version      3.4
 // @description  Automated completion for Education Perfect vocabulary tasks with learning capabilities.
 // @author       Nightclaus
 // @match        https://app.educationperfect.com/*
@@ -89,6 +89,10 @@
                 <p>Makima is listening</p>
             </div>
             <div id="tab-dict" class="tab-content active">
+                <div class="slider-container">
+                        <input type="checkbox" id="check-bidirectional-dictionary">
+                        <label class="setting-label" style="margin:0; font-weight:bold; color:#ff4d4d;">Enable Bidirectional Dictionary</label>
+                </div>
                 <button id="btn-scrape" class="action-btn">Create Dictionary</button>
                 <p style="font-size: 10px; color: #ff4d4d; text-align: center; margin-top: 5px;">* Scroll to bottom first! *</p>
                 <div id="dictionary-display"></div>
@@ -132,6 +136,7 @@
         scrapeBtn: document.getElementById('btn-scrape'),
         dictDisplay: document.getElementById('dictionary-display'),
         autoTypeCheck: document.getElementById('check-autotype'),
+        bidirectionalCheck: document.getElementById('check-bidirectional-dictionary'),
         typingSettings: document.getElementById('typing-settings'),
         startSolverBtn: document.getElementById('btn-toggle-solver'),
         ansPreview: document.getElementById('display-answer'),
@@ -173,15 +178,18 @@
             
             if (target && base) {
                 wordDictionary[target] = base;
-                wordDictionary[base] = target;
+                if (elements.bidirectionalCheck.checked) {
+                    wordDictionary[base] = target;
+                }
                 const row = document.createElement('div');
                 row.className = 'word-pair';
                 row.innerHTML = `<span class="key">${target}</span> : ${base}`;
                 elements.dictDisplay.appendChild(row);
             }
         });
+        const dictionaryLength = Object.keys(wordDictionary).length;
         elements.dictDisplay.style.display = 'block';
-        elements.scrapeBtn.innerText = `REFRESH (${Math.floor(Object.keys(wordDictionary).length / 2)} words)`;
+        elements.scrapeBtn.innerText = `REFRESH (${elements.bidirectionalCheck.checked ? dictionaryLength : Math.floor(dictionaryLength / 2)} words)`;
     };
 
     // --- 5. Solver Logic ---
